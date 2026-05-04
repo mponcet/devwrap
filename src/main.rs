@@ -20,16 +20,16 @@ fn bind(path: &str) -> impl Iterator<Item = String> {
     ["--bind".into(), path.clone(), path].into_iter()
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
 
-    let current_dir = std::env::current_dir()
-        .unwrap()
-        .to_string_lossy()
-        .into_owned();
-    let already_isolated = std::env::var("DEVWRAP").is_ok();
+    let current_dir = std::env::current_dir()?;
+    let current_dir = current_dir
+        .to_str()
+        .ok_or(anyhow::anyhow!("invalid utf8 chars in current dir path"))?;
+    let already_sandboxed = std::env::var("DEVWRAP").is_ok();
 
-    if !already_isolated
+    if !already_sandboxed
         && args
             .root_markers
             .split(',')
@@ -57,7 +57,7 @@ fn main() {
             .args(ro_bind("/usr"))
             .args(ro_bind("/lib64"))
             .args(ro_bind("/run"))
-            .args(ro_bind(&std::env::var("HOMEBREW_PREFIX").unwrap()))
+            .args(ro_bind(&std::env::var("HOMEBREW_PREFIX")?))
             .args(bind("~/.cargo"))
             .args(ro_bind("~/.rustup"))
             .args(bind("~/.bashrc"))
@@ -68,8 +68,10 @@ fn main() {
             .args(ro_bind("~/.local/share/nvim"))
             .args(ro_bind("~/.gitconfig"))
             .args(ro_bind("~/.ssh/known_hosts"))
-            .args(bind(&current_dir))
+            .args(bind(current_dir))
             .arg("bash")
             .exec();
     }
+
+    Ok(())
 }
