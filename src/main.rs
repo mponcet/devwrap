@@ -10,14 +10,20 @@ struct Cli {
     root_markers: String,
 }
 
-fn ro_bind(path: &str) -> impl Iterator<Item = String> {
+fn ro_bind(path: &str) -> [String; 3] {
     let path = shellexpand::tilde(path).into_owned();
-    ["--ro-bind".into(), path.clone(), path].into_iter()
+    ["--ro-bind".into(), path.clone(), path]
 }
 
-fn bind(path: &str) -> impl Iterator<Item = String> {
+fn bind(path: &str) -> [String; 3] {
     let path = shellexpand::tilde(path).into_owned();
-    ["--bind".into(), path.clone(), path].into_iter()
+    ["--bind".into(), path.clone(), path]
+}
+
+fn symlink(src: &str, dst: &str) -> [String; 3] {
+    let src = shellexpand::tilde(src);
+    let dst = shellexpand::tilde(dst);
+    ["--symlink".into(), src.into(), dst.into()]
 }
 
 fn main() -> anyhow::Result<()> {
@@ -44,19 +50,22 @@ fn main() -> anyhow::Result<()> {
                 "--unshare-pid",
                 "--tmpfs",
                 "/tmp",
-                // "--tmpfs",
-                // "/run",
                 "--proc",
                 "/proc",
                 "--dev-bind",
                 "/dev",
                 "/dev",
             ])
-            .args(ro_bind("/etc"))
-            .args(ro_bind("/bin"))
             .args(ro_bind("/usr"))
-            .args(ro_bind("/lib64"))
+            .args(symlink("/usr/lib", "/lib"))
+            .args(symlink("/usr/lib64", "/lib64"))
+            .args(symlink("/usr/bin", "/bin"))
+            .args(symlink("/usr/sbin", "/sbin"))
             .args(ro_bind("/run"))
+            .args(ro_bind("/etc/"))
+            // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
+            .args(["--tmpfs", "/etc/ssh"])
+            .args(ro_bind("/sys"))
             .args(ro_bind(&std::env::var("HOMEBREW_PREFIX")?))
             .args(bind("~/.cargo"))
             .args(ro_bind("~/.rustup"))
