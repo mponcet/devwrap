@@ -1,7 +1,9 @@
+use anyhow::Result;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 use clap::Parser;
+use sysctl::Sysctl;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -26,7 +28,24 @@ fn symlink(src: &str, dst: &str) -> [String; 3] {
     ["--symlink".into(), src.into(), dst.into()]
 }
 
+// Check that TIOCSTI ioctl is disabled for security reasons.
+// https://github.com/containers/bubblewrap/issues/142
+#[must_use = "security check result must not be ignored"]
+fn security_check() -> Result<()> {
+    let tiocsti = sysctl::Ctl::new("dev.tty.legacy_tiocsti")?.value_string()?;
+
+    if tiocsti != "0" {
+        Err(anyhow!(
+            "for security reasons dev.tty.legacy_tiocsti should be set to 0"
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 fn main() -> anyhow::Result<()> {
+    security_check()?;
+
     let args = Cli::parse();
 
     let current_dir = std::env::current_dir()?;
