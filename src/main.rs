@@ -28,6 +28,10 @@ fn symlink(src: &str, dst: &str) -> [String; 3] {
     ["--symlink".into(), src.into(), dst.into()]
 }
 
+fn tmpfs(path: &'static str) -> [&'static str; 2] {
+    ["--tmpfs", path]
+}
+
 // Check that TIOCSTI ioctl is disabled for security reasons.
 // https://github.com/containers/bubblewrap/issues/142
 #[must_use = "security check result must not be ignored"]
@@ -67,14 +71,12 @@ fn main() -> anyhow::Result<()> {
                 "DEVWRAP",
                 "1",
                 "--unshare-pid",
-                "--tmpfs",
-                "/tmp",
                 "--proc",
                 "/proc",
-                "--dev-bind",
-                "/dev",
+                "--dev",
                 "/dev",
             ])
+            .args(tmpfs("/tmp"))
             .args(ro_bind("/usr"))
             .args(symlink("/usr/lib", "/lib"))
             .args(symlink("/usr/lib64", "/lib64"))
@@ -83,7 +85,7 @@ fn main() -> anyhow::Result<()> {
             .args(ro_bind("/run"))
             .args(ro_bind("/etc/"))
             // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
-            .args(["--tmpfs", "/etc/ssh"])
+            .args(tmpfs("/etc/ssh"))
             .args(ro_bind("/sys"))
             .args(ro_bind(&std::env::var("HOMEBREW_PREFIX")?))
             .args(bind("~/.cargo"))
