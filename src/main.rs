@@ -1,9 +1,9 @@
-use anyhow::Result;
-use std::os::unix::process::CommandExt;
-use std::process::Command;
-
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use sysctl::Sysctl;
+
+use std::os::unix::process::CommandExt;
+use std::process::Command;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
     let current_dir = std::env::current_dir()?;
     let current_dir = current_dir
         .to_str()
-        .ok_or(anyhow::anyhow!("invalid utf8 chars in current dir path"))?;
+        .ok_or(anyhow!("invalid utf8 chars in current dir path"))?;
     let already_sandboxed = std::env::var("DEVWRAP").is_ok();
 
     if !already_sandboxed
