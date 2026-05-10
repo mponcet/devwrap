@@ -28,8 +28,8 @@ fn symlink(src: &str, dst: &str) -> [String; 3] {
     ["--symlink".into(), src.into(), dst.into()]
 }
 
-fn tmpfs(path: &'static str) -> [&'static str; 2] {
-    ["--tmpfs", path]
+fn tmpfs(path: &str) -> [String; 2] {
+    ["--tmpfs".into(), path.into()]
 }
 
 // Check that TIOCSTI ioctl is disabled for security reasons.
@@ -45,6 +45,67 @@ fn security_check() -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+fn base() -> impl Iterator<Item = String> {
+    [
+        "--setenv",
+        "DEVWRAP",
+        "1",
+        "--unshare-pid",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+    ]
+    .map(String::from)
+    .into_iter()
+    .chain(tmpfs("/tmp"))
+    .chain(ro_bind("/usr"))
+    .chain(symlink("/usr/lib", "/lib"))
+    .chain(symlink("/usr/lib64", "/lib64"))
+    .chain(symlink("/usr/bin", "/bin"))
+    .chain(symlink("/usr/sbin", "/sbin"))
+    .chain(ro_bind("/run"))
+    .chain(ro_bind("/etc/"))
+    .chain(ro_bind("/sys"))
+}
+
+fn homebrew() -> Box<dyn Iterator<Item = String>> {
+    if let Ok(homebrew) = std::env::var("HOMEBREW_PREFIX") {
+        Box::new(ro_bind(&homebrew).into_iter())
+    } else {
+        Box::new(std::iter::empty())
+    }
+}
+
+// Don't bind ssh keys, sandbox should use SSH_AUTH_SOCK
+fn ssh() -> impl Iterator<Item = String> {
+    // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
+    // as root owned files are mapped to `nobody` inside the sandbox
+    tmpfs("/etc/ssh")
+        .into_iter()
+        .chain(ro_bind("~/.ssh/known_hosts"))
+}
+
+fn git() -> impl Iterator<Item = String> {
+    ro_bind("~/.gitconfig").into_iter()
+}
+
+fn bash() -> impl Iterator<Item = String> {
+    bind("~/.bashrc").into_iter().chain(bind("~/.bashrc.d"))
+}
+
+fn neovim() -> impl Iterator<Item = String> {
+    bind("~/.local/state/nvim")
+        .into_iter()
+        .chain(bind("~/.cache/nvim"))
+        .chain(ro_bind("~/.config/nvim"))
+        .chain(ro_bind("~/.local/share/nvim"))
+}
+
+fn rust() -> impl Iterator<Item = String> {
+    bind("~/.cargo").into_iter().chain(ro_bind("~/.rustup"))
 }
 
 fn main() -> anyhow::Result<()> {
@@ -66,38 +127,13 @@ fn main() -> anyhow::Result<()> {
     {
         println!("> Entering sandbox");
         let _ = Command::new("bwrap")
-            .args([
-                "--setenv",
-                "DEVWRAP",
-                "1",
-                "--unshare-pid",
-                "--proc",
-                "/proc",
-                "--dev",
-                "/dev",
-            ])
-            .args(tmpfs("/tmp"))
-            .args(ro_bind("/usr"))
-            .args(symlink("/usr/lib", "/lib"))
-            .args(symlink("/usr/lib64", "/lib64"))
-            .args(symlink("/usr/bin", "/bin"))
-            .args(symlink("/usr/sbin", "/sbin"))
-            .args(ro_bind("/run"))
-            .args(ro_bind("/etc/"))
-            // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
-            .args(tmpfs("/etc/ssh"))
-            .args(ro_bind("/sys"))
-            .args(ro_bind(&std::env::var("HOMEBREW_PREFIX")?))
-            .args(bind("~/.cargo"))
-            .args(ro_bind("~/.rustup"))
-            .args(bind("~/.bashrc"))
-            .args(bind("~/.bashrc.d"))
-            .args(bind("~/.local/state/nvim"))
-            .args(bind("~/.cache/nvim"))
-            .args(ro_bind("~/.config/nvim"))
-            .args(ro_bind("~/.local/share/nvim"))
-            .args(ro_bind("~/.gitconfig"))
-            .args(ro_bind("~/.ssh/known_hosts"))
+            .args(base())
+            .args(homebrew())
+            .args(bash())
+            .args(ssh())
+            .args(git())
+            .args(neovim())
+            .args(rust())
             .args(bind(current_dir))
             .arg("bash")
             .exec();
