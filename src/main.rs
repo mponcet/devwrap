@@ -114,9 +114,10 @@ fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
 
     let current_dir = std::env::current_dir()?;
-    let current_dir = current_dir
-        .to_str()
-        .ok_or(anyhow!("invalid utf8 chars in current dir path"))?;
+    let current_dir = current_dir.to_str().ok_or(anyhow!(
+        "invalid utf8 sequences in path: {}",
+        current_dir.to_string_lossy()
+    ))?;
     let already_sandboxed = std::env::var("DEVWRAP").is_ok();
 
     if !already_sandboxed
