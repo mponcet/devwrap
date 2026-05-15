@@ -25,6 +25,13 @@ fn homebrew() -> Box<dyn Iterator<Item = String>> {
     }
 }
 
+fn cargo_bin() -> impl Iterator<Item = String> {
+    bubblewrap::ro_bind_if_exists("~/.cargo/env")
+        .into_iter()
+        .chain(bubblewrap::ro_bind_if_exists("~/.cargo/bin"))
+        .flatten()
+}
+
 fn shell() -> impl Iterator<Item = String> {
     bubblewrap::bind("~/.bashrc")
         .into_iter()
@@ -55,6 +62,7 @@ fn neovim() -> impl Iterator<Item = String> {
 pub fn args() -> impl Iterator<Item = String> {
     system()
         .chain(homebrew())
+        .chain(cargo_bin())
         .chain(shell())
         .chain(ssh())
         .chain(git())

@@ -24,6 +24,15 @@ pub fn ro_bind(path: &str) -> [String; 3] {
     ["--ro-bind".into(), path.clone(), path]
 }
 
+pub fn ro_bind_if_exists(path: &str) -> Option<[String; 3]> {
+    let path = shellexpand::tilde(path).into_owned();
+    if std::fs::exists(&path).unwrap_or(false) {
+        Some(["--ro-bind".into(), path.clone(), path])
+    } else {
+        None
+    }
+}
+
 pub fn bind(path: &str) -> [String; 3] {
     let path = shellexpand::tilde(path).into_owned();
     ["--bind".into(), path.clone(), path]
