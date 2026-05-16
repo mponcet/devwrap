@@ -25,7 +25,16 @@ impl Profile {
                     .into_iter()
                     .chain(bubblewrap::ro_bind_if_exists("~/.npmrc"))
                     .chain(bubblewrap::ro_bind_if_exists("~/.nvm"))
+                    .chain(bubblewrap::ro_bind_if_exists("~/.yarnrc"))
                     .chain(bubblewrap::bind_if_exists("~/.npm"))
+                    .chain(bubblewrap::bind_if_exists("~/.npm-pacakages"))
+                    .chain(bubblewrap::bind_if_exists("~/.node-gyp"))
+                    .chain(bubblewrap::bind_if_exists("~/.deno"))
+                    .chain(bubblewrap::bind_if_exists("~/.cache/deno"))
+                    .chain(bubblewrap::bind_if_exists("~/.local/share/pnpm"))
+                    .chain(bubblewrap::bind_if_exists("~/.yarn"))
+                    .chain(bubblewrap::bind_if_exists("~/.yarn-config"))
+                    .chain(bubblewrap::bind_if_exists("~/.yarncache"))
                     .flatten(),
             ),
             Profile::Rust => Box::new(
