@@ -12,7 +12,6 @@ fn system() -> impl Iterator<Item = String> {
         .chain(bubblewrap::symlink("/usr/lib64", "/lib64"))
         .chain(bubblewrap::symlink("/usr/bin", "/bin"))
         .chain(bubblewrap::symlink("/usr/sbin", "/sbin"))
-        .chain(bubblewrap::ro_bind("/run"))
         .chain(bubblewrap::ro_bind("/etc/"))
         .chain(bubblewrap::ro_bind("/sys"))
 }
