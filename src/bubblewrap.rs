@@ -38,6 +38,15 @@ pub fn bind(path: &str) -> [String; 3] {
     ["--bind".into(), path.clone(), path]
 }
 
+pub fn bind_if_exists(path: &str) -> Option<[String; 3]> {
+    let path = shellexpand::tilde(path).into_owned();
+    if std::fs::exists(&path).unwrap_or(false) {
+        Some(["--bind".into(), path.clone(), path])
+    } else {
+        None
+    }
+}
+
 pub fn symlink(src: &str, dst: &str) -> [String; 3] {
     let src = shellexpand::tilde(src);
     let dst = shellexpand::tilde(dst);
