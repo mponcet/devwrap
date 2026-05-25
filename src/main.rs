@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         let dev_profiles = profile::dev::profiles()
             .filter(|p| {
                 p.root_markers()
-                    .any(|marker| std::fs::exists(marker).unwrap_or(false))
+                    .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
             })
             .collect::<Vec<_>>();
 
@@ -38,10 +38,18 @@ fn main() -> Result<()> {
             return Ok(());
         }
 
+        let extra_profiles = profile::extra::profiles()
+            .filter(|p| {
+                p.root_markers()
+                    .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
+            })
+            .collect::<Vec<_>>();
+
         println!("> Entering sandbox");
         let _ = Command::new("bwrap")
             .args(profile::base::args())
             .args(dev_profiles.iter().flat_map(|p| p.args()))
+            .args(extra_profiles.iter().flat_map(|p| p.args()))
             .args(bubblewrap::bind(current_dir))
             .arg("bash")
             .exec();

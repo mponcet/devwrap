@@ -1,5 +1,7 @@
 use crate::bubblewrap;
 
+use std::borrow::Cow;
+
 pub fn profiles() -> impl Iterator<Item = Profile> {
     [Profile::Node, Profile::Rust].into_iter()
 }
@@ -10,12 +12,12 @@ pub enum Profile {
 }
 
 impl Profile {
-    pub fn root_markers(&self) -> impl Iterator<Item = &'static str> {
+    pub fn root_markers(&self) -> impl Iterator<Item = Cow<'static, str>> {
         match self {
-            Profile::Node => ["package.json"],
-            Profile::Rust => ["Cargo.toml"],
+            Profile::Node => ["package.json"].iter(),
+            Profile::Rust => ["Cargo.toml"].iter(),
         }
-        .into_iter()
+        .map(shellexpand::tilde)
     }
 
     pub fn args(&self) -> Box<dyn Iterator<Item = String>> {
@@ -42,18 +44,6 @@ impl Profile {
                     .into_iter()
                     .chain(bubblewrap::ro_bind("~/.rustup")),
             ),
-        }
-    }
-}
-
-impl TryFrom<&str> for Profile {
-    type Error = anyhow::Error;
-
-    fn try_from(profile: &str) -> Result<Self, Self::Error> {
-        match profile {
-            "nodejs" => Ok(Profile::Node),
-            "rust" => Ok(Profile::Rust),
-            _ => Err(anyhow::anyhow!("failed to convert {profile}")),
         }
     }
 }
