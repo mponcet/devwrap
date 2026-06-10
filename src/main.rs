@@ -2,22 +2,12 @@ mod bubblewrap;
 mod profile;
 
 use anyhow::{Result, anyhow};
-use clap::Parser;
 
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    #[arg(short, long, required = true)]
-    root_markers: String,
-}
-
 fn main() -> Result<()> {
     bubblewrap::security_check()?;
-
-    // let args = Cli::parse();
 
     let already_sandboxed = std::env::var("DEVWRAP").is_ok();
     if !already_sandboxed {
