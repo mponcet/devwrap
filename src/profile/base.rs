@@ -32,39 +32,6 @@ fn cargo_bin() -> impl Iterator<Item = String> {
         .flatten()
 }
 
-fn shell() -> impl Iterator<Item = String> {
-    bubblewrap::bind("~/.bashrc")
-        .into_iter()
-        .chain(bubblewrap::bind("~/.bashrc.d"))
-}
-
-// Don't bind ssh keys, sandbox should use SSH_AUTH_SOCK
-fn ssh() -> impl Iterator<Item = String> {
-    // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
-    // as root owned files are mapped to `nobody` inside the sandbox
-    bubblewrap::tmpfs("/etc/ssh")
-        .into_iter()
-        .chain(bubblewrap::ro_bind("~/.ssh/known_hosts"))
-}
-
-fn git() -> impl Iterator<Item = String> {
-    bubblewrap::ro_bind("~/.gitconfig").into_iter()
-}
-
-fn neovim() -> impl Iterator<Item = String> {
-    bubblewrap::bind("~/.local/state/nvim")
-        .into_iter()
-        .chain(bubblewrap::bind("~/.cache/nvim"))
-        .chain(bubblewrap::ro_bind("~/.config/nvim"))
-        .chain(bubblewrap::ro_bind("~/.local/share/nvim"))
-}
-
 pub fn args() -> impl Iterator<Item = String> {
-    system()
-        .chain(homebrew())
-        .chain(cargo_bin())
-        .chain(shell())
-        .chain(ssh())
-        .chain(git())
-        .chain(neovim())
+    system().chain(homebrew()).chain(cargo_bin())
 }
