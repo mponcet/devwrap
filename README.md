@@ -1,6 +1,6 @@
 # devwrap
 
-A Rust tool that automatically launches a Bubblewrap (bwrap) sandbox when you enter a project directory. It detects project types (Rust, Node.js, etc) by marker files (`Cargo.toml`, `package.json`) and applies appropriate sandbox configurations with necessary development environment bindings.
+A Rust tool that automatically launches a Bubblewrap (bwrap) sandbox when you enter a project directory. It detects project types (Rust, Node.js, etc) by marker files (`Cargo.toml`, `package.json`) and applies appropriate sandbox configurations with necessary development environment bindings. Many tools are handled in the sandbox (Bash, Crush, Git, Neovim, SSH, etc).
 
 ## Install
 
