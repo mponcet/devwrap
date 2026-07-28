@@ -57,6 +57,10 @@ pub fn tmpfs(path: &str) -> [String; 2] {
     ["--tmpfs".into(), path.into()]
 }
 
+pub fn chdir(path: &str) -> [&str; 2] {
+    ["--chdir", path]
+}
+
 // Check that TIOCSTI ioctl is disabled for security reasons.
 // https://github.com/containers/bubblewrap/issues/142
 #[must_use = "security check result must not be ignored"]

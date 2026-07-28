@@ -41,7 +41,13 @@ fn main() -> Result<()> {
             .args(dev_profiles.iter().flat_map(|p| p.args()))
             .args(extra_profiles.iter().flat_map(|p| p.args()))
             .args(bubblewrap::bind(current_dir))
-            .arg("bash")
+            .args(bubblewrap::chdir(current_dir))
+            .arg(
+                std::env::var("SHELL")
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .unwrap_or("/bin/sh"),
+            )
             .exec();
     }
 
