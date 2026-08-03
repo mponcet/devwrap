@@ -3,12 +3,13 @@ use crate::bubblewrap;
 use std::borrow::Cow;
 
 pub fn profiles() -> impl Iterator<Item = Profile> {
-    [Profile::Node, Profile::Rust].into_iter()
+    [Profile::Node, Profile::Rust, Profile::Terragrunt].into_iter()
 }
 
 pub enum Profile {
     Node,
     Rust,
+    Terragrunt,
 }
 
 impl Profile {
@@ -16,6 +17,7 @@ impl Profile {
         match self {
             Profile::Node => ["package.json"].iter(),
             Profile::Rust => ["Cargo.toml"].iter(),
+            Profile::Terragrunt => ["root.hcl"].iter(),
         }
         .map(shellexpand::tilde)
     }
@@ -43,6 +45,13 @@ impl Profile {
                 bubblewrap::bind("~/.cargo")
                     .into_iter()
                     .chain(bubblewrap::ro_bind("~/.rustup")),
+            ),
+            Profile::Terragrunt => Box::new(
+                bubblewrap::bind_if_exists("~/.tofurc")
+                    .into_iter()
+                    .chain(bubblewrap::ro_bind_if_exists("~/.config/opentofu/tofurc"))
+                    .chain(bubblewrap::bind_if_exists("~/.terraform.d"))
+                    .flatten(),
             ),
         }
     }
