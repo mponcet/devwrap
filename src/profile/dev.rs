@@ -51,7 +51,7 @@ impl Profile {
                     .into_iter()
                     .chain(bubblewrap::ro_bind_if_exists("~/.config/opentofu/tofurc"))
                     .chain(bubblewrap::bind_if_exists("~/.terraform.d"))
-                    .chain(bubblewrap::ro_bind_if_exists("~/.aws"))
+                    .chain(bubblewrap::bind_if_exists("~/.aws"))
                     .flatten(),
             ),
         }
