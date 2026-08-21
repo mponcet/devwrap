@@ -22,38 +22,36 @@ impl Profile {
         .map(shellexpand::tilde)
     }
 
-    pub fn args(&self) -> Box<dyn Iterator<Item = String>> {
+    pub fn args(&self) -> impl Iterator<Item = String> {
         match self {
-            Profile::Node => Box::new(
-                bubblewrap::ro_bind_if_exists("~/.npm-packages")
-                    .into_iter()
-                    .chain(bubblewrap::ro_bind_if_exists("~/.npmrc"))
-                    .chain(bubblewrap::ro_bind_if_exists("~/.nvm"))
-                    .chain(bubblewrap::ro_bind_if_exists("~/.yarnrc"))
-                    .chain(bubblewrap::bind_if_exists("~/.npm"))
-                    .chain(bubblewrap::bind_if_exists("~/.npm-pacakages"))
-                    .chain(bubblewrap::bind_if_exists("~/.node-gyp"))
-                    .chain(bubblewrap::bind_if_exists("~/.deno"))
-                    .chain(bubblewrap::bind_if_exists("~/.cache/deno"))
-                    .chain(bubblewrap::bind_if_exists("~/.local/share/pnpm"))
-                    .chain(bubblewrap::bind_if_exists("~/.yarn"))
-                    .chain(bubblewrap::bind_if_exists("~/.yarn-config"))
-                    .chain(bubblewrap::bind_if_exists("~/.yarncache"))
-                    .flatten(),
-            ),
-            Profile::Rust => Box::new(
-                bubblewrap::bind("~/.cargo")
-                    .into_iter()
-                    .chain(bubblewrap::ro_bind("~/.rustup")),
-            ),
-            Profile::Terragrunt => Box::new(
-                bubblewrap::bind_if_exists("~/.tofurc")
-                    .into_iter()
-                    .chain(bubblewrap::ro_bind_if_exists("~/.config/opentofu/tofurc"))
-                    .chain(bubblewrap::bind_if_exists("~/.terraform.d"))
-                    .chain(bubblewrap::bind_if_exists("~/.aws"))
-                    .flatten(),
-            ),
+            Profile::Node => bubblewrap::BubblewrapBuilder::builder()
+                .ro_bind_if_exists("~/.npm-packages")
+                .ro_bind_if_exists("~/.npmrc")
+                .ro_bind_if_exists("~/.nvm")
+                .ro_bind_if_exists("~/.yarnrc")
+                .bind_if_exists("~/.npm")
+                .bind_if_exists("~/.npm-pacakages")
+                .bind_if_exists("~/.node-gyp")
+                .bind_if_exists("~/.deno")
+                .bind_if_exists("~/.cache/deno")
+                .bind_if_exists("~/.local/share/pnpm")
+                .bind_if_exists("~/.yarn")
+                .bind_if_exists("~/.yarn-config")
+                .bind_if_exists("~/.yarncache")
+                .build()
+                .into_iter(),
+            Profile::Rust => bubblewrap::BubblewrapBuilder::builder()
+                .bind("~/.cargo")
+                .ro_bind("~/.rustup")
+                .build()
+                .into_iter(),
+            Profile::Terragrunt => bubblewrap::BubblewrapBuilder::builder()
+                .bind_if_exists("~/.tofurc")
+                .ro_bind_if_exists("~/.config/opentofu/tofurc")
+                .bind_if_exists("~/.terraform.d")
+                .bind_if_exists("~/.aws")
+                .build()
+                .into_iter(),
         }
     }
 }

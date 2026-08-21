@@ -1,64 +1,97 @@
 use anyhow::{Result, anyhow};
 use sysctl::Sysctl;
 
-pub fn unshare_pid() -> [String; 1] {
-    ["--unshare-pid".into()]
+pub struct BubblewrapBuilder<S> {
+    args: Vec<String>,
+    _phantom: std::marker::PhantomData<S>,
 }
 
-pub fn setenv(key: &str, value: &str) -> [String; 3] {
-    ["--setenv".into(), key.into(), value.into()]
-}
+pub struct Args;
 
-pub fn proc(path: &str) -> [String; 2] {
-    let path = shellexpand::tilde(path);
-    ["--proc".into(), path.into()]
-}
-
-pub fn dev(path: &str) -> [String; 2] {
-    let path = shellexpand::tilde(path);
-    ["--dev".into(), path.into()]
-}
-
-pub fn ro_bind(path: &str) -> [String; 3] {
-    let path = shellexpand::tilde(path).into_owned();
-    ["--ro-bind".into(), path.clone(), path]
-}
-
-pub fn ro_bind_if_exists(path: &str) -> Option<[String; 3]> {
-    let path = shellexpand::tilde(path).into_owned();
-    if std::fs::exists(&path).unwrap_or(false) {
-        Some(["--ro-bind".into(), path.clone(), path])
-    } else {
-        None
+impl BubblewrapBuilder<Args> {
+    pub fn builder() -> BubblewrapBuilder<Args> {
+        Self {
+            args: Vec::new(),
+            _phantom: std::marker::PhantomData,
+        }
     }
-}
 
-pub fn bind(path: &str) -> [String; 3] {
-    let path = shellexpand::tilde(path).into_owned();
-    ["--bind".into(), path.clone(), path]
-}
-
-pub fn bind_if_exists(path: &str) -> Option<[String; 3]> {
-    let path = shellexpand::tilde(path).into_owned();
-    if std::fs::exists(&path).unwrap_or(false) {
-        Some(["--bind".into(), path.clone(), path])
-    } else {
-        None
+    pub fn build(self) -> Vec<String> {
+        self.args
     }
-}
 
-pub fn symlink(src: &str, dst: &str) -> [String; 3] {
-    let src = shellexpand::tilde(src);
-    let dst = shellexpand::tilde(dst);
-    ["--symlink".into(), src.into(), dst.into()]
-}
+    pub fn unshare_pid(mut self) -> BubblewrapBuilder<Args> {
+        self.args.extend(["--unshare-pid".into()]);
+        self
+    }
 
-pub fn tmpfs(path: &str) -> [String; 2] {
-    ["--tmpfs".into(), path.into()]
-}
+    pub fn setenv(mut self, key: &str, value: &str) -> BubblewrapBuilder<Args> {
+        self.args
+            .extend(["--setenv".into(), key.into(), value.into()]);
+        self
+    }
 
-pub fn chdir(path: &str) -> [&str; 2] {
-    ["--chdir", path]
+    pub fn proc(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        let path = shellexpand::tilde(path);
+        self.args.extend(["--proc".into(), path.into()]);
+        self
+    }
+
+    pub fn dev(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        let path = shellexpand::tilde(path);
+        self.args.extend(["--dev".into(), path.into()]);
+        self
+    }
+
+    pub fn ro_bind(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        let path = shellexpand::tilde(path).into_owned();
+        self.args.extend(["--ro-bind".into(), path.clone(), path]);
+        self
+    }
+
+    pub fn ro_bind_if_exists(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        let path = shellexpand::tilde(path).into_owned();
+        if std::fs::exists(&path).unwrap_or(false) {
+            self.args.extend(["--ro-bind".into(), path.clone(), path]);
+            self
+        } else {
+            self
+        }
+    }
+
+    pub fn bind(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        let path = shellexpand::tilde(path).into_owned();
+        self.args.extend(["--bind".into(), path.clone(), path]);
+        self
+    }
+
+    pub fn bind_if_exists(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        let path = shellexpand::tilde(path).into_owned();
+        if std::fs::exists(&path).unwrap_or(false) {
+            self.args.extend(["--bind".into(), path.clone(), path]);
+            self
+        } else {
+            self
+        }
+    }
+
+    pub fn symlink(mut self, src: &str, dst: &str) -> BubblewrapBuilder<Args> {
+        let src = shellexpand::tilde(src);
+        let dst = shellexpand::tilde(dst);
+        self.args
+            .extend(["--symlink".into(), src.into(), dst.into()]);
+        self
+    }
+
+    pub fn tmpfs(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        self.args.extend(["--tmpfs".into(), path.into()]);
+        self
+    }
+
+    pub fn chdir(mut self, path: &str) -> BubblewrapBuilder<Args> {
+        self.args.extend(["--chdir".into(), path.into()]);
+        self
+    }
 }
 
 // Check that TIOCSTI ioctl is disabled for security reasons.

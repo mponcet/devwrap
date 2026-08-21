@@ -40,8 +40,12 @@ fn main() -> Result<()> {
             .args(profile::base::args())
             .args(dev_profiles.iter().flat_map(|p| p.args()))
             .args(extra_profiles.iter().flat_map(|p| p.args()))
-            .args(bubblewrap::bind(current_dir))
-            .args(bubblewrap::chdir(current_dir))
+            .args(
+                bubblewrap::BubblewrapBuilder::builder()
+                    .bind(current_dir)
+                    .chdir(current_dir)
+                    .build(),
+            )
             .arg(
                 std::env::var("SHELL")
                     .as_ref()
