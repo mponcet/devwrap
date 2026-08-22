@@ -1,6 +1,6 @@
-use crate::bubblewrap;
-
 use std::borrow::Cow;
+
+use crate::bubblewrap::Bubblewrap;
 
 pub fn profiles() -> impl Iterator<Item = Profile> {
     [
@@ -33,25 +33,24 @@ impl Profile {
         markers.iter().copied().map(shellexpand::tilde)
     }
 
-    pub fn args(&self) -> Vec<String> {
-        let mut builder = bubblewrap::BubblewrapBuilder::builder();
+    pub fn args(&self, bwrap: &mut Bubblewrap) {
         match self {
             Profile::Bash => {
-                builder = builder
+                bwrap
                     .ro_bind_if_exists("~/.bashrc")
                     .ro_bind_if_exists("~/.bashrc.d")
                     .bind_if_exists("~/.bash_history");
             }
             Profile::Crush => {
-                builder = builder
+                bwrap
                     .ro_bind_if_exists("~/.config/crush")
                     .bind_if_exists("~/.local/share/crush");
             }
             Profile::Git => {
-                builder = builder.ro_bind_if_exists("~/.gitconfig");
+                bwrap.ro_bind_if_exists("~/.gitconfig");
             }
             Profile::Neovim => {
-                builder = builder
+                bwrap
                     .bind_if_exists("~/.local/state/nvim")
                     .bind_if_exists("~/.cache/nvim")
                     .ro_bind_if_exists("~/.config/nvim")
@@ -61,14 +60,13 @@ impl Profile {
                 // Don't bind ssh keys, sandbox should use SSH_AUTH_SOCK
                 // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
                 // as root owned files are mapped to `nobody` inside the sandbox
-                builder = builder
+                bwrap
                     .tmpfs("/etc/ssh")
                     .ro_bind_if_exists("~/.ssh/known_hosts");
                 if let Ok(path) = std::env::var("SSH_AUTH_SOCK") {
-                    builder = builder.bind_if_exists(&path);
+                    bwrap.bind_if_exists(&path);
                 }
             }
         }
-        builder.build()
     }
 }

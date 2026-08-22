@@ -3,12 +3,9 @@ mod profile;
 
 use anyhow::{Result, anyhow};
 
-use std::os::unix::process::CommandExt;
-use std::process::Command;
+use crate::bubblewrap::Bubblewrap;
 
 fn main() -> Result<()> {
-    bubblewrap::security_check()?;
-
     let already_sandboxed = std::env::var("DEVWRAP").is_ok();
     if !already_sandboxed {
         let current_dir = std::env::current_dir()?;
@@ -17,43 +14,31 @@ fn main() -> Result<()> {
             current_dir.to_string_lossy()
         ))?;
 
-        let dev_profiles = profile::dev::profiles()
-            .filter(|p| {
-                p.root_markers()
-                    .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
-            })
-            .collect::<Vec<_>>();
+        let mut bwrap = Bubblewrap::new();
+        profile::base::args(&mut bwrap);
 
-        if dev_profiles.is_empty() {
-            return Ok(());
+        for profile in profile::dev::profiles() {
+            if profile
+                .root_markers()
+                .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
+            {
+                profile.args(&mut bwrap);
+            }
         }
 
-        let extra_profiles = profile::extra::profiles()
-            .filter(|p| {
-                p.root_markers()
-                    .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
-            })
-            .collect::<Vec<_>>();
+        for profile in profile::extra::profiles() {
+            if profile
+                .root_markers()
+                .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
+            {
+                profile.args(&mut bwrap);
+            }
+        }
 
         println!("> Entering sandbox");
-        let _ = Command::new("bwrap")
-            .args(profile::base::args())
-            .args(dev_profiles.iter().flat_map(|p| p.args()))
-            .args(extra_profiles.iter().flat_map(|p| p.args()))
-            .args(
-                bubblewrap::BubblewrapBuilder::builder()
-                    .bind(current_dir)
-                    .chdir(current_dir)
-                    .build(),
-            )
-            .arg(
-                std::env::var("SHELL")
-                    .as_ref()
-                    .map(|s| s.as_str())
-                    .unwrap_or("/bin/sh"),
-            )
-            .exec();
+        let err = bwrap.bind(current_dir).chdir(current_dir).exec();
+        Err(anyhow!(err))
+    } else {
+        Ok(())
     }
-
-    Ok(())
 }

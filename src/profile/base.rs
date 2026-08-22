@@ -1,9 +1,7 @@
-use crate::bubblewrap;
+use crate::bubblewrap::Bubblewrap;
 
-fn system() -> impl Iterator<Item = String> {
-    // let builder = bubblwrap::builder();
-    // builder.add(buble
-    bubblewrap::BubblewrapBuilder::builder()
+fn system(bwrap: &mut Bubblewrap) {
+    bwrap
         .unshare_pid()
         .setenv("DEVWRAP", "1")
         .proc("/proc")
@@ -16,29 +14,23 @@ fn system() -> impl Iterator<Item = String> {
         .symlink("/usr/sbin", "/sbin")
         .ro_bind("/run/systemd/resolve/stub-resolv.conf")
         .ro_bind("/etc/")
-        .ro_bind("/sys")
-        .build()
-        .into_iter()
+        .ro_bind("/sys");
 }
 
-fn homebrew() -> Vec<String> {
+fn homebrew(bwrap: &mut Bubblewrap) {
     if let Ok(homebrew) = std::env::var("HOMEBREW_PREFIX") {
-        // Box::new(bubblewrap::ro_bind(&homebrew).into_iter())
-        bubblewrap::BubblewrapBuilder::builder()
-            .ro_bind(&homebrew)
-            .build()
-    } else {
-        bubblewrap::BubblewrapBuilder::builder().build()
+        bwrap.ro_bind(&homebrew);
     }
 }
 
-fn cargo_bin() -> Vec<String> {
-    bubblewrap::BubblewrapBuilder::builder()
+fn cargo_bin(bwrap: &mut Bubblewrap) {
+    bwrap
         .ro_bind_if_exists("~/.cargo/env")
-        .ro_bind_if_exists("~/.cargo/bin")
-        .build()
+        .ro_bind_if_exists("~/.cargo/bin");
 }
 
-pub fn args() -> impl Iterator<Item = String> {
-    system().chain(homebrew()).chain(cargo_bin())
+pub fn args(bwrap: &mut Bubblewrap) {
+    system(bwrap);
+    homebrew(bwrap);
+    cargo_bin(bwrap);
 }
