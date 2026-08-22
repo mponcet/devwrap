@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::bubblewrap::Bubblewrap;
 
-pub fn profiles() -> impl Iterator<Item = Profile> {
+fn profiles() -> impl Iterator<Item = Profile> {
     [
         Profile::Bash,
         Profile::Crush,
@@ -13,7 +13,7 @@ pub fn profiles() -> impl Iterator<Item = Profile> {
     .into_iter()
 }
 
-pub enum Profile {
+enum Profile {
     Bash,
     Crush,
     Git,
@@ -22,7 +22,7 @@ pub enum Profile {
 }
 
 impl Profile {
-    pub fn root_markers(&self) -> impl Iterator<Item = Cow<'static, str>> {
+    fn root_markers(&self) -> impl Iterator<Item = Cow<'static, str>> {
         let markers: &[&str] = match self {
             Profile::Bash => ["~/.bashrc"].as_slice(),
             Profile::Crush => [".crush", "~/.config/crush/crush.json"].as_slice(),
@@ -33,7 +33,7 @@ impl Profile {
         markers.iter().copied().map(shellexpand::tilde)
     }
 
-    pub fn args(&self, bwrap: &mut Bubblewrap) {
+    fn args(&self, bwrap: &mut Bubblewrap) {
         match self {
             Profile::Bash => {
                 bwrap
@@ -67,6 +67,17 @@ impl Profile {
                     bwrap.bind_if_exists(&path);
                 }
             }
+        }
+    }
+}
+
+pub fn args(bwrap: &mut Bubblewrap) {
+    for profile in profiles() {
+        if profile
+            .root_markers()
+            .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
+        {
+            profile.args(bwrap)
         }
     }
 }

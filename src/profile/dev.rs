@@ -2,18 +2,18 @@ use std::borrow::Cow;
 
 use crate::bubblewrap::Bubblewrap;
 
-pub fn profiles() -> impl Iterator<Item = Profile> {
-    [Profile::Node, Profile::Rust, Profile::Terragrunt].into_iter()
-}
-
-pub enum Profile {
+enum Profile {
     Node,
     Rust,
     Terragrunt,
 }
 
+fn profiles() -> impl Iterator<Item = Profile> {
+    [Profile::Node, Profile::Rust, Profile::Terragrunt].into_iter()
+}
+
 impl Profile {
-    pub fn root_markers(&self) -> impl Iterator<Item = Cow<'static, str>> {
+    fn root_markers(&self) -> impl Iterator<Item = Cow<'static, str>> {
         match self {
             Profile::Node => ["package.json"].iter(),
             Profile::Rust => ["Cargo.toml"].iter(),
@@ -22,7 +22,7 @@ impl Profile {
         .map(shellexpand::tilde)
     }
 
-    pub fn args(&self, bwrap: &mut Bubblewrap) {
+    fn args(&self, bwrap: &mut Bubblewrap) {
         match self {
             Profile::Node => bwrap
                 .ro_bind_if_exists("~/.npm-packages")
@@ -45,5 +45,24 @@ impl Profile {
                 .bind_if_exists("~/.terraform.d")
                 .bind_if_exists("~/.aws"),
         };
+    }
+}
+
+pub fn should_sandbox() -> bool {
+    profiles().any(|profile| {
+        profile
+            .root_markers()
+            .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
+    })
+}
+
+pub fn args(bwrap: &mut Bubblewrap) {
+    for profile in profiles() {
+        if profile
+            .root_markers()
+            .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
+        {
+            profile.args(bwrap)
+        }
     }
 }

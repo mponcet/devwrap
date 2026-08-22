@@ -7,34 +7,17 @@ use crate::bubblewrap::Bubblewrap;
 
 fn main() -> Result<()> {
     let already_sandboxed = std::env::var("DEVWRAP").is_ok();
-    if !already_sandboxed {
+    if !already_sandboxed && profile::dev::should_sandbox() {
         let current_dir = std::env::current_dir()?;
         let current_dir = current_dir.to_str().ok_or(anyhow!(
-            "invalid utf8 sequences in path: {}",
+            "current dir is not valid utf8: {}",
             current_dir.to_string_lossy()
         ))?;
 
         let mut bwrap = Bubblewrap::new();
         profile::base::args(&mut bwrap);
-
-        for profile in profile::dev::profiles() {
-            if profile
-                .root_markers()
-                .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
-            {
-                profile.args(&mut bwrap);
-            }
-        }
-
-        for profile in profile::extra::profiles() {
-            if profile
-                .root_markers()
-                .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
-            {
-                profile.args(&mut bwrap);
-            }
-        }
-
+        profile::dev::args(&mut bwrap);
+        profile::extra::args(&mut bwrap);
         println!("> Entering sandbox");
         let err = bwrap.bind(current_dir).chdir(current_dir).exec();
         Err(anyhow!(err))
