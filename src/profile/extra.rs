@@ -2,6 +2,14 @@ use std::borrow::Cow;
 
 use crate::bubblewrap::Bubblewrap;
 
+enum Profile {
+    Bash,
+    Crush,
+    Git,
+    Neovim,
+    Ssh,
+}
+
 fn profiles() -> impl Iterator<Item = Profile> {
     [
         Profile::Bash,
@@ -11,14 +19,6 @@ fn profiles() -> impl Iterator<Item = Profile> {
         Profile::Ssh,
     ]
     .into_iter()
-}
-
-enum Profile {
-    Bash,
-    Crush,
-    Git,
-    Neovim,
-    Ssh,
 }
 
 impl Profile {
@@ -54,7 +54,8 @@ impl Profile {
                     .bind_if_exists("~/.local/state/nvim")
                     .bind_if_exists("~/.cache/nvim")
                     .ro_bind_if_exists("~/.config/nvim")
-                    .ro_bind_if_exists("~/.local/share/nvim");
+                    .ro_bind_if_exists("~/.local/share/nvim")
+                    .bind_if_exists("~/.local/share/nvim/telescope_history");
             }
             Profile::Ssh => {
                 // Don't bind ssh keys, sandbox should use SSH_AUTH_SOCK
