@@ -48,6 +48,9 @@ impl Profile {
             }
             Profile::Git => {
                 bwrap.ro_bind_if_exists("~/.gitconfig");
+                for path in git_config_includes() {
+                    bwrap.ro_bind_if_exists(&path);
+                }
             }
             Profile::Neovim => {
                 bwrap
@@ -81,4 +84,23 @@ pub fn args(bwrap: &mut Bubblewrap) {
             profile.args(bwrap)
         }
     }
+}
+
+/// Returns an iterator of git config files.
+fn git_config_includes() -> impl Iterator<Item = String> {
+    let mut includes = Vec::new();
+
+    if let Ok(config) = git2::Config::open_default()
+        && let Ok(mut entries) = config.entries(Some("include.*path"))
+    {
+        while let Some(entry) = entries.next()
+            && let Ok(entry) = entry
+        {
+            if let Ok(value) = entry.value() {
+                includes.push(shellexpand::tilde(value).into());
+            }
+        }
+    }
+
+    includes.into_iter()
 }
