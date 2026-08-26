@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
+enum-iterator = "2.3.0"
 git2 = "0.21.0"
 shellexpand = "3.1.2"
 sysctl = "0.7.1"

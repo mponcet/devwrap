@@ -1,15 +1,14 @@
 use std::borrow::Cow;
 
-use crate::bubblewrap::Bubblewrap;
+use enum_iterator::{Sequence, all};
 
+use crate::bubblewrap::BubblewrapArgs;
+
+#[derive(Sequence)]
 enum Profile {
     Node,
     Rust,
     Terragrunt,
-}
-
-fn profiles() -> impl Iterator<Item = Profile> {
-    [Profile::Node, Profile::Rust, Profile::Terragrunt].into_iter()
 }
 
 impl Profile {
@@ -22,9 +21,9 @@ impl Profile {
         .map(shellexpand::tilde)
     }
 
-    fn args(&self, bwrap: &mut Bubblewrap) {
+    fn args(&self, args: &mut BubblewrapArgs) {
         match self {
-            Profile::Node => bwrap
+            Profile::Node => args
                 .ro_bind_if_exists("~/.npm-packages")
                 .ro_bind_if_exists("~/.npmrc")
                 .ro_bind_if_exists("~/.nvm")
@@ -38,8 +37,8 @@ impl Profile {
                 .bind_if_exists("~/.yarn")
                 .bind_if_exists("~/.yarn-config")
                 .bind_if_exists("~/.yarncache"),
-            Profile::Rust => bwrap.bind("~/.cargo").ro_bind("~/.rustup"),
-            Profile::Terragrunt => bwrap
+            Profile::Rust => args.bind("~/.cargo").ro_bind("~/.rustup"),
+            Profile::Terragrunt => args
                 .bind_if_exists("~/.tofurc")
                 .ro_bind_if_exists("~/.config/opentofu/tofurc")
                 .bind_if_exists("~/.terraform.d")
@@ -49,20 +48,24 @@ impl Profile {
 }
 
 pub fn should_sandbox() -> bool {
-    profiles().any(|profile| {
+    all::<Profile>().any(|profile| {
         profile
             .root_markers()
             .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
     })
 }
 
-pub fn args(bwrap: &mut Bubblewrap) {
-    for profile in profiles() {
+pub fn args() -> BubblewrapArgs {
+    let mut args = BubblewrapArgs::new();
+
+    for profile in all::<Profile>() {
         if profile
             .root_markers()
             .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
         {
-            profile.args(bwrap)
+            profile.args(&mut args)
         }
     }
+
+    args
 }

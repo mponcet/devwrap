@@ -1,24 +1,16 @@
 use std::borrow::Cow;
 
-use crate::bubblewrap::Bubblewrap;
+use enum_iterator::{Sequence, all};
 
+use crate::bubblewrap::BubblewrapArgs;
+
+#[derive(Sequence)]
 enum Profile {
     Bash,
     Crush,
     Git,
     Neovim,
     Ssh,
-}
-
-fn profiles() -> impl Iterator<Item = Profile> {
-    [
-        Profile::Bash,
-        Profile::Crush,
-        Profile::Git,
-        Profile::Neovim,
-        Profile::Ssh,
-    ]
-    .into_iter()
 }
 
 impl Profile {
@@ -33,28 +25,25 @@ impl Profile {
         markers.iter().copied().map(shellexpand::tilde)
     }
 
-    fn args(&self, bwrap: &mut Bubblewrap) {
+    fn args(&self, args: &mut BubblewrapArgs) {
         match self {
             Profile::Bash => {
-                bwrap
-                    .ro_bind_if_exists("~/.bashrc")
+                args.ro_bind_if_exists("~/.bashrc")
                     .ro_bind_if_exists("~/.bashrc.d")
                     .bind_if_exists("~/.bash_history");
             }
             Profile::Crush => {
-                bwrap
-                    .ro_bind_if_exists("~/.config/crush")
+                args.ro_bind_if_exists("~/.config/crush")
                     .bind_if_exists("~/.local/share/crush");
             }
             Profile::Git => {
-                bwrap.ro_bind_if_exists("~/.gitconfig");
+                args.ro_bind_if_exists("~/.gitconfig");
                 for path in git_config_includes() {
-                    bwrap.ro_bind_if_exists(&path);
+                    args.ro_bind_if_exists(&path);
                 }
             }
             Profile::Neovim => {
-                bwrap
-                    .bind_if_exists("~/.local/state/nvim")
+                args.bind_if_exists("~/.local/state/nvim")
                     .bind_if_exists("~/.cache/nvim")
                     .ro_bind_if_exists("~/.config/nvim")
                     .ro_bind_if_exists("~/.local/share/nvim")
@@ -64,26 +53,29 @@ impl Profile {
                 // Don't bind ssh keys, sandbox should use SSH_AUTH_SOCK
                 // Fix `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`
                 // as root owned files are mapped to `nobody` inside the sandbox
-                bwrap
-                    .tmpfs("/etc/ssh")
+                args.tmpfs("/etc/ssh")
                     .ro_bind_if_exists("~/.ssh/known_hosts");
                 if let Ok(path) = std::env::var("SSH_AUTH_SOCK") {
-                    bwrap.bind_if_exists(&path);
+                    args.bind_if_exists(&path);
                 }
             }
         }
     }
 }
 
-pub fn args(bwrap: &mut Bubblewrap) {
-    for profile in profiles() {
+pub fn args() -> BubblewrapArgs {
+    let mut args = BubblewrapArgs::new();
+
+    for profile in all::<Profile>() {
         if profile
             .root_markers()
             .any(|marker| std::fs::exists(marker.as_ref()).unwrap_or(false))
         {
-            profile.args(bwrap)
+            profile.args(&mut args)
         }
     }
+
+    args
 }
 
 /// Returns an iterator of git config files.

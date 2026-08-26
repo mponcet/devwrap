@@ -1,8 +1,7 @@
-use crate::bubblewrap::Bubblewrap;
+use crate::bubblewrap::BubblewrapArgs;
 
-fn system(bwrap: &mut Bubblewrap) {
-    bwrap
-        .unshare_pid()
+fn system(args: &mut BubblewrapArgs) {
+    args.unshare_pid()
         .setenv("DEVWRAP", "1")
         .proc("/proc")
         .dev("/dev")
@@ -17,20 +16,23 @@ fn system(bwrap: &mut Bubblewrap) {
         .ro_bind("/sys");
 }
 
-fn homebrew(bwrap: &mut Bubblewrap) {
+fn homebrew(args: &mut BubblewrapArgs) {
     if let Ok(homebrew) = std::env::var("HOMEBREW_PREFIX") {
-        bwrap.ro_bind(&homebrew);
+        args.ro_bind(&homebrew);
     }
 }
 
-fn cargo_bin(bwrap: &mut Bubblewrap) {
-    bwrap
-        .ro_bind_if_exists("~/.cargo/env")
+fn cargo_bin(args: &mut BubblewrapArgs) {
+    args.ro_bind_if_exists("~/.cargo/env")
         .ro_bind_if_exists("~/.cargo/bin");
 }
 
-pub fn args(bwrap: &mut Bubblewrap) {
-    system(bwrap);
-    homebrew(bwrap);
-    cargo_bin(bwrap);
+pub fn args() -> BubblewrapArgs {
+    let mut args = BubblewrapArgs::new();
+
+    system(&mut args);
+    homebrew(&mut args);
+    cargo_bin(&mut args);
+
+    args
 }

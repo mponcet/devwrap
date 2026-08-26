@@ -1,3 +1,4 @@
+use std::ffi::{OsStr, OsString};
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
@@ -16,49 +17,93 @@ impl Bubblewrap {
         }
     }
 
-    pub fn exec(&mut self) -> std::io::Error {
-        self.command
-            .arg(
-                std::env::var("SHELL")
-                    .as_ref()
-                    .map(|s| s.as_str())
-                    .unwrap_or("/bin/sh"),
-            )
-            .exec()
+    pub fn args(&mut self, args: &BubblewrapArgs) -> &mut Self {
+        self.command.args(&**args);
+        self
+    }
+
+    pub fn exec(&mut self) -> anyhow::Result<!, anyhow::Error> {
+        let current_dir = std::env::current_dir().map_err(anyhow::Error::from)?;
+
+        Err(anyhow::anyhow!(
+            self.command
+                .arg("--bind")
+                .arg(&current_dir)
+                .arg(&current_dir)
+                .arg("--chdir")
+                .arg(&current_dir)
+                .arg(
+                    std::env::var("SHELL")
+                        .as_ref()
+                        .map(|s| s.as_str())
+                        .unwrap_or("/bin/sh"),
+                )
+                .exec()
+        ))
+    }
+}
+
+pub struct BubblewrapArgs {
+    args: Vec<OsString>,
+}
+
+impl std::ops::Deref for BubblewrapArgs {
+    type Target = [OsString];
+
+    fn deref(&self) -> &Self::Target {
+        &self.args
+    }
+}
+
+impl BubblewrapArgs {
+    pub fn new() -> Self {
+        Self { args: Vec::new() }
+    }
+
+    fn arg<S: AsRef<OsStr>>(&mut self, arg: S) {
+        self.args.push(arg.as_ref().into());
+    }
+
+    fn args<I, S>(&mut self, args: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        self.args.extend(args.into_iter().map(|ref arg| arg.into()))
     }
 
     pub fn unshare_pid(&mut self) -> &mut Self {
-        self.command.arg("--unshare-pid");
+        self.arg("--unshare-pid");
         self
     }
 
     pub fn setenv(&mut self, key: &str, value: &str) -> &mut Self {
-        self.command.args(["--setenv", key, value]);
+        self.args(["--setenv", key, value]);
         self
     }
 
     pub fn proc(&mut self, path: &str) -> &mut Self {
         let path = shellexpand::tilde(path);
-        self.command.args(["--proc", &path]);
+        self.args(["--proc", &path]);
         self
     }
 
     pub fn dev(&mut self, path: &str) -> &mut Self {
         let path = shellexpand::tilde(path);
-        self.command.args(["--dev", &path]);
+        self.args(["--dev", &path]);
         self
     }
 
     pub fn ro_bind(&mut self, path: &str) -> &mut Self {
         let path = shellexpand::tilde(path).into_owned();
-        self.command.args(["--ro-bind", &path, &path]);
+        self.args(["--ro-bind", &path, &path]);
         self
     }
 
     pub fn ro_bind_if_exists(&mut self, path: &str) -> &mut Self {
         let path = shellexpand::tilde(path).into_owned();
         if std::fs::exists(&path).unwrap_or(false) {
-            self.command.args(["--ro-bind", &path, &path]);
+            self.args(["--ro-bind", &path, &path]);
             self
         } else {
             self
@@ -67,14 +112,14 @@ impl Bubblewrap {
 
     pub fn bind(&mut self, path: &str) -> &mut Self {
         let path = shellexpand::tilde(path).into_owned();
-        self.command.args(["--bind", &path, &path]);
+        self.args(["--bind", &path, &path]);
         self
     }
 
     pub fn bind_if_exists(&mut self, path: &str) -> &mut Self {
         let path = shellexpand::tilde(path).into_owned();
         if std::fs::exists(&path).unwrap_or(false) {
-            self.command.args(["--bind", &path, &path]);
+            self.args(["--bind", &path, &path]);
             self
         } else {
             self
@@ -84,17 +129,12 @@ impl Bubblewrap {
     pub fn symlink(&mut self, src: &str, dst: &str) -> &mut Self {
         let src = shellexpand::tilde(src);
         let dst = shellexpand::tilde(dst);
-        self.command.args(["--symlink", &src, &dst]);
+        self.args(["--symlink", &src, &dst]);
         self
     }
 
     pub fn tmpfs(&mut self, path: &str) -> &mut Self {
-        self.command.args(["--tmpfs", path]);
-        self
-    }
-
-    pub fn chdir(&mut self, path: &str) -> &mut Self {
-        self.command.args(["--chdir", path]);
+        self.args(["--tmpfs", path]);
         self
     }
 }
