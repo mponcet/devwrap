@@ -1,4 +1,3 @@
-use std::ffi::{OsStr, OsString};
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
@@ -18,7 +17,7 @@ impl Bubblewrap {
     }
 
     pub fn args(&mut self, args: &BubblewrapArgs) -> &mut Self {
-        self.command.args(&**args);
+        self.command.args(args);
         self
     }
 
@@ -44,14 +43,15 @@ impl Bubblewrap {
 }
 
 pub struct BubblewrapArgs {
-    args: Vec<OsString>,
+    args: Vec<String>,
 }
 
-impl std::ops::Deref for BubblewrapArgs {
-    type Target = [OsString];
+impl<'a> IntoIterator for &'a BubblewrapArgs {
+    type Item = &'a String;
+    type IntoIter = std::slice::Iter<'a, String>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.args
+    fn into_iter(self) -> Self::IntoIter {
+        self.args.iter()
     }
 }
 
@@ -60,16 +60,17 @@ impl BubblewrapArgs {
         Self { args: Vec::new() }
     }
 
-    fn arg<S: AsRef<OsStr>>(&mut self, arg: S) {
+    fn arg<S: AsRef<str>>(&mut self, arg: S) {
         self.args.push(arg.as_ref().into());
     }
 
     fn args<I, S>(&mut self, args: I)
     where
         I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
+        S: AsRef<str>,
     {
-        self.args.extend(args.into_iter().map(|ref arg| arg.into()))
+        self.args
+            .extend(args.into_iter().map(|s| s.as_ref().to_string()))
     }
 
     pub fn unshare_pid(&mut self) -> &mut Self {
