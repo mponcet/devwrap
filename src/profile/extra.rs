@@ -10,6 +10,7 @@ enum Profile {
     Crush,
     Git,
     Neovim,
+    Pi,
     Ssh,
 }
 
@@ -20,6 +21,7 @@ impl Profile {
             Profile::Crush => [".crush", "~/.config/crush/crush.json"].as_slice(),
             Profile::Git => [".git"].as_slice(),
             Profile::Neovim => ["~/.config/nvim"].as_slice(),
+            Profile::Pi => ["~/.pi"].as_slice(),
             Profile::Ssh => ["~/.ssh"].as_slice(),
         };
         markers.iter().copied().map(shellexpand::tilde)
@@ -48,6 +50,9 @@ impl Profile {
                     .ro_bind_if_exists("~/.config/nvim")
                     .ro_bind_if_exists("~/.local/share/nvim")
                     .bind_if_exists("~/.local/share/nvim/telescope_history");
+            }
+            Profile::Pi => {
+                args.bind_if_exists("~/.pi");
             }
             Profile::Ssh => {
                 // Don't bind ssh keys, sandbox should use SSH_AUTH_SOCK
