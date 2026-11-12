@@ -39,10 +39,9 @@ impl Profile {
                 .bind_if_exists("~/.yarncache"),
             Profile::Rust => args.bind("~/.cargo").ro_bind("~/.rustup"),
             Profile::Terragrunt => args
-                .bind_if_exists("~/.tofurc")
+                .ro_bind_if_exists("~/.tofurc")
                 .ro_bind_if_exists("~/.config/opentofu/tofurc")
-                .bind_if_exists("~/.terraform.d")
-                .bind_if_exists("~/.aws"),
+                .bind_if_exists("~/.terraform.d"),
         };
     }
 }
