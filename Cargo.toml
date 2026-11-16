@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.104"
 enum-iterator = "2.3.0"
-git2 = "0.21.0"
+git2 = { version = "0.21.0", default-features = false, features = ["vendored-libgit2"] }
 shellexpand = "3.1.2"
 sysctl = "0.7.1"
